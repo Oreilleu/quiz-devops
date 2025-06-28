@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Quiz Multijoueur</title>
+    <link rel="icon" href="data:,">/
+
+    <!-- Styles CSS -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/animations.css">
+
+    <!-- Socket.IO (load first) -->
+    <script src="libs/socket.io.min.js"></script>
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/7931f6c474.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <div id="app">
+        <div class="container">
+            <header class="header">
+                <h1><i class="fas fa-trophy"></i> Quiz Multijoueur</h1>
+            </header>
+
+            <main id="main-content">
+                <!-- Les écrans seront injectés ici -->
+            </main>
+
+            <div id="notifications"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/utils/constants.js"></script>
+    <script src="js/utils/helpers.js"></script>
+
+    <script src="js/components/SocketManager.js"></script>
+    <script src="js/components/ScreenManager.js"></script>
+    <script src="js/components/UIManager.js"></script>
+
+    <script src="js/screens/LoginScreen.js"></script>
+    <script src="js/screens/LobbyScreen.js"></script>
+    <script src="js/screens/CountdownScreen.js"></script>
+    <script src="js/screens/GameScreen.js"></script>
+    <script src="js/screens/ResultsScreen.js"></script>
+    <script src="js/screens/FinalScreen.js"></script>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>
