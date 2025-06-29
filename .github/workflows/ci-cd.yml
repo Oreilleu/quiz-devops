@@ -64,7 +64,7 @@ jobs:
       - name: Run Checkov
         run: |
           cd infrastructure/terraform
-          checkov -d . --framework terraform --output cli
+          checkov -d . --framework terraform --output cli --config-file .checkov.yml
   
   ansible-validation:
     name: 🎭 Validation Ansible

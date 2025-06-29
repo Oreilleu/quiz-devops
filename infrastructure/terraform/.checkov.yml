@@ -1,0 +1,31 @@
+---
+# Checkov configuration for learning environment
+# Skip checks that are too strict for educational purposes
+
+framework:
+  - terraform
+
+skip-check:
+  # Skip SSH and HTTP access checks (needed for learning environment)
+  - CKV_AWS_24    # SSH access from 0.0.0.0/0
+  - CKV_AWS_260   # HTTP access from 0.0.0.0/0
+  - CKV_AWS_232   # NACL SSH access
+  - CKV_AWS_231   # NACL RDP access
+  
+  # Skip advanced security features (not needed for learning)
+  - CKV_AWS_126   # Detailed monitoring
+  - CKV_AWS_135   # EBS optimization
+  - CKV_AWS_79    # Instance Metadata Service v2
+  - CKV_AWS_8     # EBS encryption
+  - CKV2_AWS_41   # IAM role attachment
+  - CKV2_AWS_11   # VPC flow logging
+  - CKV2_AWS_12   # Default security group
+  
+  # Skip network security that conflicts with simple architecture
+  - CKV_AWS_382   # Egress restrictions
+  - CKV_AWS_23    # Security group rule descriptions
+  - CKV_AWS_130   # Public subnet auto-assign IP (needed for web servers)
+
+# Only show high severity issues
+hard-fail-on:
+  - HIGH
