@@ -124,7 +124,7 @@ jobs:
           tar -czf quiz-app-$(date +%Y%m%d-%H%M%S).tar.gz deploy-package/
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: quiz-app-build
           path: quiz-app-*.tar.gz
@@ -164,7 +164,7 @@ jobs:
           terraform plan -out=tfplan
       
       - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-${{ github.event.inputs.deploy_environment }}
           path: infrastructure/terraform/tfplan
