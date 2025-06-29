@@ -1,0 +1,73 @@
+---
+- name: Create API directory
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: Deploy backend source files
+  copy:
+    src: "../../../../backend/src/"
+    dest: "{{ app_dir }}/src/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: preserve
+    directory_mode: '0755'
+
+- name: Deploy backend package files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ app_dir }}/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+  loop:
+    - "../../../../backend/package.json"
+    - "../../../../backend/server.js"
+
+- name: Set backend file permissions
+  file:
+    path: "{{ app_dir }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    recurse: yes
+
+- name: Install npm dependencies
+  npm:
+    path: "{{ app_dir }}"
+    state: present
+    production: yes
+  become_user: "{{ app_user }}"
+
+- name: Create environment configuration
+  template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0600'
+  notify: restart quiz-api
+
+- name: Create systemd service
+  template:
+    src: quiz-api.service.j2
+    dest: /etc/systemd/system/quiz-api.service
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart quiz-api
+
+- name: Start and enable API service
+  systemd:
+    name: quiz-api
+    state: started
+    enabled: yes
+
+- name: Wait for API to be ready
+  wait_for:
+    port: "{{ app_port }}"
+    host: localhost
+    delay: 5
+    timeout: 60

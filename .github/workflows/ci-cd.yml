@@ -1,0 +1,202 @@
+name: 🚀 CI/CD Quiz Multijoueur
+
+# Se déclenche au push sur main et develop
+# Se déclenche lorsque d'une pr est crée sur la branche main
+on:
+  push:
+    branches: [ main, develop ] 
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+# Utile pour garder ne pas utilser les dernière versions qui nécessite peut etre de changer la pipeline
+env:
+  TF_VERSION: '1.6.0'
+  ANSIBLE_VERSION: '8.0.0'
+  NODE_VERSION: '18'
+
+jobs: 
+  terraform-security:
+    name: 🔒 Sécurité Terraform
+    runs-on: ubuntu-latest
+    steps:
+      # Met le code dans la vm
+      - name: Checkout code
+        uses: actions/checkout@v4
+      # Installe terraform sur la vm avec la version
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # Corrige si erreur de formatage
+      - name: Terraform format check
+        run: |
+          cd infrastructure/terraform
+          terraform fmt -check -recursive
+
+      # Télécharge et instale TFlint
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          sudo mv tflint /usr/local/bin/
+
+      # Lance TFlint, qui vérifie la logique de la terraform, s'il peut s'executer correctement
+      # Le paramètre --minimun-failure-severity=error permet de ne pas casser la pipeline sur des warning, que sur des erreurs
+      - name: Run TFLint
+        run: |
+          cd infrastructure/terraform
+          tflint --init
+          tflint --format compact --minimum-failure-severity=error
+      
+      - name: Install Checkov
+        run: |
+          pip3 install checkov
+      # Lance Checkov qui vérfie l'aspect sécuritaire 
+      - name: Run Checkov
+        run: |
+          cd infrastructure/terraform
+          checkov -d . --framework terraform --output cli
+  
+  ansible-validation:
+    name: 🎭 Validation Ansible
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Ansible
+        run: |
+          pip3 install ansible==${{ env.ANSIBLE_VERSION }}
+          pip3 install ansible-lint
+
+      - name: Ansible syntax check
+        run: |
+          cd infrastructure/ansible
+          ansible-playbook --syntax-check playbook.yml -i inventory/hosts.ini
+      # Vérifie les bonnes pratique
+      - name: Ansible lint
+        run: |
+          cd infrastructure/ansible
+          ansible-lint playbook.yml
+
+  build:
+    name: 📦 Package
+    runs-on: ubuntu-latest
+    needs: [terraform-security, ansible-validation]
+    # Resttriction pour créer un package de la version que sur la version déployer sur main
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment package
+        run: |
+          echo "📦 Création du package de déploiement"
+          
+          # Créer l'archive de déploiement
+          mkdir -p deploy-package
+          
+          # Backend
+          cp -r backend deploy-package/
+          
+          # Frontend  
+          cp -r frontend deploy-package/
+          
+          # Infrastructure
+          cp -r infrastructure deploy-package/
+          
+          # Créer l'archive
+          tar -czf quiz-app-$(date +%Y%m%d-%H%M%S).tar.gz deploy-package/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: quiz-app-build
+          path: quiz-app-*.tar.gz
+          retention-days: 30
+
+  deploy-infrastructure:
+    name: 🏗️ Déploiement Infrastructure (MANUEL)
+    runs-on: ubuntu-latest
+    needs: [build]
+    # S'éxécute que si le déploiement est manuel 
+    if: github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.deploy_environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+
+      - name: Terraform Init
+        run: |
+          cd infrastructure/terraform
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd infrastructure/terraform
+          terraform plan -out=tfplan
+      
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-plan-${{ github.event.inputs.deploy_environment }}
+          path: infrastructure/terraform/tfplan
+
+      - name: 🚨 TERRAFORM APPLY MANUEL REQUIS - INSTRUCTIONS
+        run: |
+          echo "🚨 ATTENTION: Terraform Apply doit être exécuté MANUELLEMENT"
+          echo "=============================================================="
+          echo ""
+          echo "📋 ÉTAPES DE DÉPLOIEMENT :"
+          echo ""
+          echo "1️⃣  TÉLÉCHARGER LE PLAN :"
+          echo "   → Aller dans les 'Artifacts' de cette exécution GitHub"
+          echo "   → Télécharger: terraform-plan-${{ github.event.inputs.deploy_environment }}"
+          echo ""
+          echo "2️⃣  APPLIQUER L'INFRASTRUCTURE :"
+          echo "   cd infrastructure/terraform"
+          echo "   terraform init"
+          echo "   terraform apply tfplan  # ⚠️ MANUEL REQUIS"
+          echo ""
+          echo "3️⃣  RÉCUPÉRER LES IPs DES INSTANCES :"
+          echo "   terraform output web_server_public_ip"
+          echo "   terraform output api_server_public_ip"
+          echo ""
+          echo "4️⃣  CONFIGURER ANSIBLE :"
+          echo "   # Éditer infrastructure/ansible/inventory/hosts.ini"
+          echo "   # Remplacer WEB_SERVER_IP par l'IP réelle du web"
+          echo "   # Remplacer API_SERVER_IP par l'IP réelle de l'API"
+          echo ""
+          echo "5️⃣  DÉPLOYER L'APPLICATION :"
+          echo "   cd infrastructure/ansible"
+          echo "   ansible-playbook -i inventory/hosts.ini playbook.yml --private-key ~/.ssh/quiz-app-key.pem"
+          echo ""
+          exit 1
+

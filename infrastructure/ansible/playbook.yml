@@ -1,0 +1,44 @@
+- name: Deploy Quiz Application
+  hosts: all
+  become: yes
+  gather_facts: yes
+  roles:
+    - common
+
+- name: Configure Web Server
+  hosts: web_servers
+  become: yes
+  roles:
+    - web
+
+- name: Configure API Server
+  hosts: api_servers
+  become: yes
+  roles:
+    - api
+
+- name: Final Verification
+  hosts: all
+  become: no
+  tasks:
+    - name: Wait for services to be ready
+      wait_for:
+        port: "{{ item.port }}"
+        host: "{{ item.host }}"
+        delay: 5
+        timeout: 30
+      loop:
+        - { host: "{{ hostvars[groups['api_servers'][0]]['ansible_host'] }}", port: "{{ app_port }}" }
+        - { host: "{{ hostvars[groups['web_servers'][0]]['ansible_host'] }}", port: "{{ web_port }}" }
+      delegate_to: localhost
+      run_once: true
+      when: inventory_hostname == groups['all'][0]
+
+    - name: Display deployment info
+      debug:
+        msg: |
+          Deployment successful!
+          Frontend: http://{{ hostvars[groups['web_servers'][0]]['ansible_host'] }}
+          API: http://{{ hostvars[groups['api_servers'][0]]['ansible_host'] }}:{{ app_port }}
+      run_once: true
+      when: inventory_hostname == groups['all'][0]

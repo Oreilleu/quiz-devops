@@ -7,9 +7,9 @@ const getServerUrl = () => {
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'http://localhost:3001'; // Développement
     } else if (hostname.includes('staging') || hostname.includes('dev')) {
-        return 'http://15.236.224.68:3001'; // Staging
+        return 'http://{{ hostvars[groups["api_servers"][0]]["ansible_host"] }}:{{ app_port }}'; // Staging
     } else {
-        return 'http://15.236.224.68:3001'; // Production
+        return 'http://{{ hostvars[groups["api_servers"][0]]["ansible_host"] }}:{{ app_port }}'; // Production
     }
 };
 

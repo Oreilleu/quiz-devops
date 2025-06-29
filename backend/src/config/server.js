@@ -17,18 +17,7 @@ class Server {
         this.server = http.createServer(this.app);
         this.io = socketIo(this.server, {
             cors: {
-                origin: process.env.ALLOWED_ORIGINS?.split(',') || function(origin, callback) {
-                    // Allow requests with no origin (like mobile apps or curl requests)
-                    if (!origin) return callback(null, true);
-                    
-                    // Allow localhost and 127.0.0.1 on any port for development
-                    if (origin.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/)) {
-                        return callback(null, true);
-                    }
-                    
-                    // Block other origins in development
-                    callback(new Error('Not allowed by CORS'));
-                },
+                origin: true, // Allow all origins for now
                 methods: ["GET", "POST", "PUT", "DELETE"],
                 allowedHeaders: ["Content-Type"],
                 credentials: false
@@ -39,18 +28,7 @@ class Server {
 
     setupMiddleware() {
         this.app.use(cors({
-            origin: process.env.ALLOWED_ORIGINS?.split(',') || function(origin, callback) {
-                // Allow requests with no origin (like mobile apps or curl requests)
-                if (!origin) return callback(null, true);
-                
-                // Allow localhost and 127.0.0.1 on any port for development
-                if (origin.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/)) {
-                    return callback(null, true);
-                }
-                
-                // Block other origins in development
-                callback(new Error('Not allowed by CORS'));
-            },
+            origin: true, // Allow all origins for now
             methods: ["GET", "POST", "PUT", "DELETE"],
             allowedHeaders: ["Content-Type"],
             credentials: false

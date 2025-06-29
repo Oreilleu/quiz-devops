@@ -1,0 +1,60 @@
+---
+- name: Remove default nginx content
+  file:
+    path: /var/www/html/index.nginx-debian.html
+    state: absent
+
+- name: Create web directory
+  file:
+    path: "{{ web_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: Deploy frontend files
+  copy:
+    src: "../../../../frontend/"
+    dest: "{{ web_dir }}/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: preserve
+    directory_mode: '0755'
+
+- name: Set frontend file permissions
+  file:
+    path: "{{ web_dir }}"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+    recurse: yes
+
+- name: Set directory permissions
+  file:
+    path: "{{ web_dir }}"
+    mode: '0755'
+    recurse: yes
+    state: directory
+
+- name: Configure constants.js with API URL
+  template:
+    src: constants.js.j2
+    dest: "{{ web_dir }}/public/js/utils/constants.js"
+    backup: yes
+
+- name: Configure nginx
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/sites-available/default
+    backup: yes
+  notify: restart nginx
+
+- name: Test nginx configuration
+  command: nginx -t
+  changed_when: false
+
+- name: Start and enable nginx
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes

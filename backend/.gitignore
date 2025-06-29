@@ -1,5 +1,30 @@
-/node_modules
+# Dependencies
+node_modules/
+
+# Environment files
 .env
-quiz.db
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Database files
+/data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+/logs/
+*.log
 app.log
 error.log
+
+# Runtime files
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
