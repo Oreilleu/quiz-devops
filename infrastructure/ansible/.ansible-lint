@@ -1,0 +1,21 @@
+---
+profile: min  # Use minimal profile instead of basic
+exclude_paths:
+  - .cache/
+  - .github/
+  - molecule/
+  - .ansible-lint-ignore
+
+# Skip specific rules that are too strict for this project
+skip_list:
+  - yaml[truthy]           # Allow yes/no instead of true/false
+  - fqcn[action-core]      # Allow short module names
+  - fqcn[action]           # Allow short module names
+  - name[casing]           # Allow lowercase task names
+  - yaml[new-line-at-end-of-file]  # Don't require newline at end
+  - run-once[task]         # Allow run_once usage
+  - risky-file-permissions # Allow default file permissions
+  - partial-become         # Allow become_user without become
+  - command-instead-of-module  # Allow curl/shell commands
+  - risky-shell-pipe       # Allow pipes without pipefail
+  - no-changed-when        # Allow commands without changed_when

@@ -48,7 +48,6 @@ jobs:
       - name: Install TFLint
         run: |
           curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-          sudo mv tflint /usr/local/bin/
 
       # Lance TFlint, qui vérifie la logique de la terraform, s'il peut s'executer correctement
       # Le paramètre --minimun-failure-severity=error permet de ne pas casser la pipeline sur des warning, que sur des erreurs
