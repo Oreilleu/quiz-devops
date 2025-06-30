@@ -7,6 +7,14 @@
     group: "{{ app_group }}"
     mode: '0755'
 
+- name: Create data directory for database
+  file:
+    path: "{{ app_dir }}/data"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
 - name: Deploy backend source files
   copy:
     src: "../../../../backend/src/"
@@ -68,6 +76,15 @@
 - name: Wait for API to be ready
   wait_for:
     port: "{{ app_port }}"
-    host: localhost
-    delay: 5
-    timeout: 60
+    host: 0.0.0.0
+    delay: 10
+    timeout: 90
+
+- name: Verify API is responding
+  uri:
+    url: "http://localhost:{{ app_port }}"
+    method: GET
+    timeout: 10
+  register: api_health_check
+  retries: 5
+  delay: 5

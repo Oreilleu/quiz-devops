@@ -55,10 +55,10 @@ class Server {
             this.setupMiddleware();
             initSocketHandlers(this.io);
 
-            this.server.listen(this.port, () => {
+            this.server.listen(this.port, '0.0.0.0', () => {
                 logger.info(`🚀 Serveur démarré sur le port ${this.port}`);
-                logger.info(`📱 Interface disponible sur http://localhost:${this.port}`);
-                logger.info(`🔗 API disponible sur http://localhost:${this.port}/api`);
+                logger.info(`📱 Interface disponible sur http://0.0.0.0:${this.port}`);
+                logger.info(`🔗 API disponible sur http://0.0.0.0:${this.port}/api`);
             });
 
         } catch (error) {

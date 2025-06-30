@@ -13,7 +13,7 @@ server {
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
-    add_header Content-Security-Policy "default-src *; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data:; font-src *; connect-src *; media-src * data:; object-src 'none';" always;
+    add_header Content-Security-Policy "default-src *; script-src-elem * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data:; font-src *; connect-src *; media-src http: https: data:; object-src 'none';" always;
     
     # SPA routing
     location / {
@@ -24,6 +24,7 @@ server {
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        add_header Content-Security-Policy "default-src *; script-src-elem * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline'; img-src * data:; font-src *; connect-src *; media-src http: https: data:; object-src 'none';" always;
     }
     
     # Socket.IO proxy
