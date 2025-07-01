@@ -26,11 +26,6 @@
     mode: '0644'
     directory_mode: '0755'
 
-- name: Configure constants.js with API URL
-  template:
-    src: constants.js.j2
-    dest: "{{ web_dir }}/public/js/utils/constants.js"
-    backup: yes
 
 - name: Configure nginx
   template:

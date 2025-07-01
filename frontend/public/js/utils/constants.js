@@ -2,14 +2,12 @@
 const getServerUrl = () => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
-    
+
     // Configuration par environnement
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        return 'http://localhost:3001'; // Développement
-    } else if (hostname.includes('staging') || hostname.includes('dev')) {
-        return 'http://15.236.224.68:3001'; // Staging
+        return 'http://localhost:3001';
     } else {
-        return 'http://15.236.224.68:3001'; // Production
+        return `${protocol}//${hostname}`;
     }
 };
 
