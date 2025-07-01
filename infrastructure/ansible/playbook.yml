@@ -21,18 +21,21 @@
   hosts: all
   become: no
   tasks:
-    - name: Wait for services to be ready
+    - name: Wait for API service to be ready
       wait_for:
-        port: "{{ item.port }}"
-        host: "{{ item.host }}"
+        port: "{{ app_port }}"
+        host: "0.0.0.0"
         delay: 5
         timeout: 30
-      loop:
-        - { host: "{{ hostvars[groups['api_servers'][0]]['ansible_host'] }}", port: "{{ app_port }}" }
-        - { host: "{{ hostvars[groups['web_servers'][0]]['ansible_host'] }}", port: "{{ web_port }}" }
-      delegate_to: localhost
-      run_once: true
-      when: inventory_hostname == groups['all'][0]
+      when: inventory_hostname in groups['api_servers']
+
+    - name: Wait for web service to be ready
+      wait_for:
+        port: "{{ web_port }}"
+        host: "0.0.0.0"
+        delay: 5
+        timeout: 30
+      when: inventory_hostname in groups['web_servers']
 
     - name: Display deployment info
       debug:
