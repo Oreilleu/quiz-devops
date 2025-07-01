@@ -268,7 +268,6 @@ jobs:
         run: |
           cd infrastructure/ansible
           echo "🚀 Déploiement de l'application en cours..."
-          # Simulation du déploiement Ansible (remplacer par la vraie commande)
-          ansible-playbook --syntax-check playbook.yml -i inventory/hosts.ini
+          ansible-playbook -i inventory/hosts.ini playbook.yml -v
           echo "✅ Application déployée avec succès"
 
