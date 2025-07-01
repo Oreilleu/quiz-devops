@@ -12,29 +12,19 @@
     group: "{{ app_group }}"
     mode: '0755'
 
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+
 - name: Deploy frontend files
   copy:
     src: "../../../../frontend/"
     dest: "{{ web_dir }}/"
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: preserve
-    directory_mode: '0755'
-
-- name: Set frontend file permissions
-  file:
-    path: "{{ web_dir }}"
     owner: www-data
     group: www-data
     mode: '0644'
-    recurse: yes
-
-- name: Set directory permissions
-  file:
-    path: "{{ web_dir }}"
-    mode: '0755'
-    recurse: yes
-    state: directory
+    directory_mode: '0755'
 
 - name: Configure constants.js with API URL
   template:

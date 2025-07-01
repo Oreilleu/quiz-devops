@@ -11,7 +11,6 @@
       - wget
       - unzip
       - git
-      - nginx
     state: present
 
 - name: Install Node.js
@@ -26,11 +25,3 @@
   register: node_version
   failed_when: node_version.rc != 0
 
-- name: Create app user
-  user:
-    name: "{{ app_user }}"
-    system: yes
-    shell: /bin/bash
-    home: /home/{{ app_user }}
-    createhome: yes
-  when: app_user != 'ubuntu'
