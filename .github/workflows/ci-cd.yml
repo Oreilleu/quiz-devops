@@ -226,27 +226,23 @@ jobs:
     name: 🚀 Déploiement Application
     runs-on: ubuntu-latest
     needs: [check-terraform-changes, deploy-infrastructure]
-    if: always() 
+    if: always()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-
       - name: Install Ansible
         run: |
           pip3 install ansible==${{ env.ANSIBLE_VERSION }}
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-3
-
       - name: Get Infrastructure Outputs
         if: needs.check-terraform-changes.outputs.has_changes == 'true'
         run: |
@@ -256,26 +252,23 @@ jobs:
           API_IP=$(terraform output -raw api_server_public_ip)
           echo "WEB_SERVER_IP=$WEB_IP" >> $GITHUB_ENV
           echo "API_SERVER_IP=$API_IP" >> $GITHUB_ENV
-
       - name: Update Ansible Inventory
-        if: needs.check-terraform-changes.outputs.has_changes == 'true'
+        if: needs.check-terraform-changes.outputs.has_changes == 'true'  # ← AJOUTER
         run: |
           cd infrastructure/ansible
           sed -i "s/WEB_SERVER_IP/$WEB_SERVER_IP/g" inventory/hosts.ini
           sed -i "s/API_SERVER_IP/$API_SERVER_IP/g" inventory/hosts.ini
-
       - name: Setup SSH key
+        if: needs.check-terraform-changes.outputs.has_changes == 'true'  # ← AJOUTER
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/quiz-app-key.pem
           chmod 600 ~/.ssh/quiz-app-key.pem
-          ssh-keyscan -H "${{ env.WEB_SERVER_IP }}" >> ~/.ssh/known_hosts
-          ssh-keyscan -H "${{ env.API_SERVER_IP }}" >> ~/.ssh/known_hosts
-
+          ssh-keyscan -H "$WEB_SERVER_IP" >> ~/.ssh/known_hosts  # ← CORRIGER
+          ssh-keyscan -H "$API_SERVER_IP" >> ~/.ssh/known_hosts  # ← CORRIGER
       - name: Deploy Application with Ansible
         run: |
           cd infrastructure/ansible
           echo "🚀 Déploiement de l'application en cours..."
-          ansible-playbook -i inventory/hosts.ini playbook.yml -v
+          ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory/hosts.ini playbook.yml -v
           echo "✅ Application déployée avec succès"
-
