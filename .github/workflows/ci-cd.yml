@@ -264,6 +264,14 @@ jobs:
           sed -i "s/WEB_SERVER_IP/$WEB_SERVER_IP/g" inventory/hosts.ini
           sed -i "s/API_SERVER_IP/$API_SERVER_IP/g" inventory/hosts.ini
 
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/quiz-app-key.pem
+          chmod 600 ~/.ssh/quiz-app-key.pem
+          ssh-keyscan -H "${{ env.WEB_SERVER_IP }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ env.API_SERVER_IP }}" >> ~/.ssh/known_hosts
+
       - name: Deploy Application with Ansible
         run: |
           cd infrastructure/ansible
