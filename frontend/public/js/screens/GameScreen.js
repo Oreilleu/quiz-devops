@@ -69,14 +69,22 @@ class GameScreen {
 
     renderAnswers() {
         if (!this.currentQuestion.options) {
-            return '<div class="loading">Chargement des réponses...</div>';
+            return `
+                <div class="loading-answers">
+                    <div class="loading-spinner"></div>
+                    <p>Chargement des réponses...</p>
+                </div>
+            `;
         }
 
         const answersHTML = this.currentQuestion.options.map((option, index) => `
             <button class="answer-btn" 
-                    data-answer="${index}">
+                    data-answer="${index}"
+                    tabindex="0"
+                    aria-label="Réponse ${String.fromCharCode(65 + index)}: ${option}">
                 <span class="answer-letter">${String.fromCharCode(65 + index)}</span>
                 <span class="answer-text">${option}</span>
+                <span class="keyboard-hint">${index + 1}</span>
             </button>
         `).join('');
         
@@ -138,14 +146,14 @@ class GameScreen {
     }
 
     setupAnswerClickHandlers() {
-        
         // Utiliser event delegation pour les boutons de réponse
         const container = document.querySelector('#main-content');
         if (container) {
             // Retirer les anciens event listeners
             container.removeEventListener('click', this.handleAnswerClick);
+            container.removeEventListener('keydown', this.handleAnswerKeydown);
             
-            // Ajouter le nouveau event listener
+            // Ajouter les nouveaux event listeners
             this.handleAnswerClick = (event) => {
                 const answerBtn = event.target.closest('.answer-btn');
                 if (answerBtn) {
@@ -153,9 +161,36 @@ class GameScreen {
                     this.selectAnswer(answerIndex);
                 }
             };
+
+            this.handleAnswerKeydown = (event) => {
+                const answerBtn = event.target.closest('.answer-btn');
+                if (answerBtn && (event.key === 'Enter' || event.key === ' ')) {
+                    event.preventDefault();
+                    const answerIndex = parseInt(answerBtn.getAttribute('data-answer'));
+                    this.selectAnswer(answerIndex);
+                }
+
+                // Support des touches numériques 1-4 pour sélectionner les réponses
+                if (event.key >= '1' && event.key <= '4') {
+                    const answerIndex = parseInt(event.key) - 1;
+                    const maxAnswers = this.currentQuestion?.options?.length || 0;
+                    if (answerIndex < maxAnswers) {
+                        this.selectAnswer(answerIndex);
+                    }
+                }
+
+                // Support des touches A-D pour sélectionner les réponses
+                if (event.key.toLowerCase() >= 'a' && event.key.toLowerCase() <= 'd') {
+                    const answerIndex = event.key.toLowerCase().charCodeAt(0) - 'a'.charCodeAt(0);
+                    const maxAnswers = this.currentQuestion?.options?.length || 0;
+                    if (answerIndex < maxAnswers) {
+                        this.selectAnswer(answerIndex);
+                    }
+                }
+            };
             
             container.addEventListener('click', this.handleAnswerClick);
-        } else {
+            container.addEventListener('keydown', this.handleAnswerKeydown);
         }
     }
 
