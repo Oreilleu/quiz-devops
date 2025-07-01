@@ -247,10 +247,25 @@ jobs:
         run: |
           cd infrastructure/terraform
           terraform init
-          WEB_IP=$(terraform output -raw web_server_public_ip)
-          API_IP=$(terraform output -raw api_server_public_ip)
-          echo "WEB_SERVER_IP=$WEB_IP" >> $GITHUB_ENV
-          echo "API_SERVER_IP=$API_IP" >> $GITHUB_ENV
+          
+          # Vérifier si l'infrastructure existe
+          if terraform state list | grep -q "aws_instance"; then
+            echo "Infrastructure trouvée, récupération des outputs..."
+            WEB_IP=$(terraform output -raw web_server_ip 2>/dev/null || echo "")
+            API_IP=$(terraform output -raw api_server_ip 2>/dev/null || echo "")
+            
+            if [ -n "$WEB_IP" ] && [ -n "$API_IP" ]; then
+              echo "WEB_SERVER_IP=$WEB_IP" >> $GITHUB_ENV
+              echo "API_SERVER_IP=$API_IP" >> $GITHUB_ENV
+              echo "✅ Outputs récupérés: WEB=$WEB_IP, API=$API_IP"
+            else
+              echo "❌ Impossible de récupérer les outputs"
+              exit 1
+            fi
+          else
+            echo "❌ Infrastructure non déployée"
+            exit 1
+          fi
       - name: Update Ansible Inventory
         run: |
           cd infrastructure/ansible
