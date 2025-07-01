@@ -251,28 +251,47 @@ jobs:
         
       - name: Get Infrastructure Outputs
         run: |
-          # Vérifier si l'infrastructure existe via AWS CLI
-          WEB_INSTANCES=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=quiz-multijoueur-web-server" \
-                      "Name=instance-state-name,Values=running" \
-            --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --output text | tr -d '\n')
-          
-          API_INSTANCES=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=quiz-multijoueur-api-server" \
-                      "Name=instance-state-name,Values=running" \
-            --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --output text | tr -d '\n')
-          
-          if [ -n "$WEB_INSTANCES" ] && [ -n "$API_INSTANCES" ]; then
-            echo "WEB_SERVER_IP=$WEB_INSTANCES" >> $GITHUB_ENV
-            echo "API_SERVER_IP=$API_INSTANCES" >> $GITHUB_ENV
-            echo "✅ Infrastructure trouvée: WEB=$WEB_INSTANCES, API=$API_INSTANCES"
+          # Si l'infrastructure vient d'être déployée, utiliser Terraform outputs
+          if [ "${{ needs.deploy-infrastructure.result }}" = "success" ]; then
+            echo "🔄 Infrastructure vient d'être déployée, utilisation des outputs Terraform"
+            cd infrastructure/terraform
+            terraform init
+            WEB_IP=$(terraform output -raw web_server_ip 2>/dev/null || echo "")
+            API_IP=$(terraform output -raw api_server_ip 2>/dev/null || echo "")
+            
+            if [ -n "$WEB_IP" ] && [ -n "$API_IP" ]; then
+              echo "WEB_SERVER_IP=$WEB_IP" >> $GITHUB_ENV
+              echo "API_SERVER_IP=$API_IP" >> $GITHUB_ENV
+              echo "✅ Outputs Terraform récupérés: WEB=$WEB_IP, API=$API_IP"
+            else
+              echo "❌ Impossible de récupérer les outputs Terraform"
+              exit 1
+            fi
           else
-            echo "❌ Infrastructure non trouvée ou instances non démarrées"
-            echo "WEB: $WEB_INSTANCES"
-            echo "API: $API_INSTANCES"
-            exit 1
+            echo "🔍 Infrastructure existante, recherche via AWS CLI"
+            # Vérifier si l'infrastructure existe via AWS CLI
+            WEB_INSTANCES=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=quiz-multijoueur-web-server" \
+                        "Name=instance-state-name,Values=running" \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --output text | tr -d '\n')
+            
+            API_INSTANCES=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=quiz-multijoueur-api-server" \
+                        "Name=instance-state-name,Values=running" \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --output text | tr -d '\n')
+            
+            if [ -n "$WEB_INSTANCES" ] && [ -n "$API_INSTANCES" ]; then
+              echo "WEB_SERVER_IP=$WEB_INSTANCES" >> $GITHUB_ENV
+              echo "API_SERVER_IP=$API_INSTANCES" >> $GITHUB_ENV
+              echo "✅ Infrastructure trouvée via AWS CLI: WEB=$WEB_INSTANCES, API=$API_INSTANCES"
+            else
+              echo "❌ Infrastructure non trouvée ou instances non démarrées"
+              echo "WEB: $WEB_INSTANCES"
+              echo "API: $API_INSTANCES"
+              exit 1
+            fi
           fi
       - name: Update Ansible Inventory
         run: |
