@@ -1077,8 +1077,8 @@ input.invalid {
     height: 100%;
     background: linear-gradient(90deg, 
         transparent, 
-        rgba(90, 103, 216, 0.15), 
-        rgba(118, 75, 162, 0.1), 
+        rgba(45, 55, 72, 0.15), 
+        rgba(74, 85, 104, 0.1), 
         transparent
     );
     transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1128,9 +1128,9 @@ input.invalid {
 /* États interactifs */
 .answer-btn:hover:not(.selected):not(.correct):not(.incorrect):not(:disabled) {
     border-color: var(--primary-color);
-    background: linear-gradient(145deg, #ffffff 0%, rgba(90, 103, 216, 0.03) 100%);
+    background: linear-gradient(145deg, #ffffff 0%, rgba(45, 55, 72, 0.03) 100%);
     transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(90, 103, 216, 0.2), 0 3px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 25px rgba(45, 55, 72, 0.2), 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
 .answer-btn:hover:not(.selected):not(.correct):not(.incorrect):not(:disabled) .answer-letter {
@@ -1147,7 +1147,7 @@ input.invalid {
 .answer-btn:hover:not(.selected):not(.correct):not(.incorrect):not(:disabled)::after {
     transform: translateY(-50%) scale(1);
     background: var(--primary-color);
-    box-shadow: 0 0 8px rgba(90, 103, 216, 0.5);
+    box-shadow: 0 0 8px rgba(45, 55, 72, 0.5);
 }
 
 /* État actif/pressé */
@@ -1162,7 +1162,7 @@ input.invalid {
     color: white;
     border-color: var(--primary-color);
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 12px 28px rgba(90, 103, 216, 0.4), 0 6px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 12px 28px rgba(45, 55, 72, 0.4), 0 6px 12px rgba(0, 0, 0, 0.15);
     animation: selectedPulse 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1258,15 +1258,15 @@ input.invalid {
 @keyframes selectedPulse {
     0% {
         transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 12px 28px rgba(90, 103, 216, 0.4), 0 6px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 12px 28px rgba(45, 55, 72, 0.4), 0 6px 12px rgba(0, 0, 0, 0.15);
     }
     50% {
         transform: translateY(-4px) scale(1.05);
-        box-shadow: 0 16px 35px rgba(90, 103, 216, 0.5), 0 8px 15px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 16px 35px rgba(45, 55, 72, 0.5), 0 8px 15px rgba(0, 0, 0, 0.2);
     }
     100% {
         transform: translateY(-2px) scale(1.02);
-        box-shadow: 0 12px 28px rgba(90, 103, 216, 0.4), 0 6px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 12px 28px rgba(45, 55, 72, 0.4), 0 6px 12px rgba(0, 0, 0, 0.15);
     }
 }
 
@@ -1750,7 +1750,7 @@ input.invalid {
 /* Indicateurs visuels pour l'accessibilité */
 .answer-btn:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.3), 0 8px 25px rgba(90, 103, 216, 0.2);
+    box-shadow: 0 0 0 3px rgba(45, 55, 72, 0.3), 0 8px 25px rgba(45, 55, 72, 0.2);
     border-color: var(--primary-color);
 }
 

@@ -108,24 +108,6 @@ class LoginScreen {
                         </div>
                     </form>
 
-                    <div class="divider">
-                        <span>ou</span>
-                    </div>
-
-                    <div class="quick-actions">
-                        <h3><i class="fas fa-zap"></i> Actions rapides</h3>
-                        <div class="quick-buttons">
-                            <button class="btn btn-secondary btn-small" id="join-random-btn">
-                                <i class="fas fa-random"></i> Partie aléatoire
-                            </button>
-                            <button class="btn btn-secondary btn-small" id="recent-rooms-btn">
-                                <i class="fas fa-history"></i> Salles récentes
-                            </button>
-                            <button class="btn btn-secondary btn-small" id="clear-data-btn">
-                                <i class="fas fa-broom"></i> Effacer données
-                            </button>
-                        </div>
-                    </div>
 
                     <div id="recent-rooms" class="recent-rooms" style="display: none;">
                         <h4><i class="fas fa-clock"></i> Salles récentes</h4>
@@ -272,20 +254,6 @@ class LoginScreen {
             randomRoomBtn.addEventListener('click', this.generateRandomRoom.bind(this));
         }
 
-        const joinRandomBtn = document.getElementById('join-random-btn');
-        if (joinRandomBtn) {
-            joinRandomBtn.addEventListener('click', this.joinRandomRoom.bind(this));
-        }
-
-        const recentRoomsBtn = document.getElementById('recent-rooms-btn');
-        if (recentRoomsBtn) {
-            recentRoomsBtn.addEventListener('click', this.showRecentRooms.bind(this));
-        }
-
-        const clearDataBtn = document.getElementById('clear-data-btn');
-        if (clearDataBtn) {
-            clearDataBtn.addEventListener('click', this.clearSavedData.bind(this));
-        }
 
         // Écouter les événements du socket
         this.setupSocketEventListeners();
