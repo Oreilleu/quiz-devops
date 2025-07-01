@@ -24,7 +24,7 @@ frontend/
 │   │   ├── main.css           # Styles principaux et variables
 │   │   ├── components.css     # Styles des composants UI
 │   │   └── animations.css     # Animations et transitions
-│   ├── js/
+│   ├── js/S
 │   │   ├── app.js            # Point d'entrée principal
 │   │   ├── components/
 │   │   │   ├── SocketManager.js    # 🔥 Gestionnaire WebSocket

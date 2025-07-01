@@ -226,7 +226,7 @@ jobs:
     name: 🚀 Déploiement Application
     runs-on: ubuntu-latest
     needs: [check-terraform-changes, deploy-infrastructure]
-    if: always() && (needs.check-terraform-changes.result == 'success')
+    if: always() 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

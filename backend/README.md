@@ -1,6 +1,6 @@
 # Quiz Multijoueur Backend
 
-Backend pour une application de quiz multijoueur en temps réel utilisant Socket.IO.
+frontend pour une application de quiz multijoueur en temps réel utilisant Socket.IO.
 
 ## 🚀 Démarrage rapide
 
