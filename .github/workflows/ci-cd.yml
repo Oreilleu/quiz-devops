@@ -237,15 +237,31 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
-        
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/quiz-app-key.pem
           chmod 600 ~/.ssh/quiz-app-key.pem
       
-      - name: Generate hosts.ini and Deploy Application
+      - name: Initialize Terraform and Generate hosts.ini
         run: |
-          echo "🚀 Déploiement de l'application avec make deploy..."
-          make deploy
+          echo "🔧 Initialisation Terraform pour récupérer les outputs..."
+          make init
+          echo "📝 Génération du fichier hosts.ini..."
+          make hosts
+          echo "📋 Contenu du fichier hosts.ini généré:"
+          cat infrastructure/ansible/inventory/hosts.ini
+      
+      - name: Deploy Application with Ansible
+        run: |
+          echo "🚀 Déploiement de l'application avec Ansible..."
+          SSH_AUTH_SOCK="" ansible-playbook -i infrastructure/ansible/inventory/hosts.ini infrastructure/ansible/playbook.yml
           echo "✅ Application déployée avec succès"
