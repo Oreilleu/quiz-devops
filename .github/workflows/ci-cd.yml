@@ -147,13 +147,22 @@ jobs:
           retention-days: 30
 
   check-infrastructure:
-    name: 🔍 Vérification Infrastructure via AWS
+    name: 🔍 Vérification Infrastructure et Changements
     runs-on: ubuntu-latest
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     outputs:
-      infrastructure_exists: ${{ steps.check_aws.outputs.infrastructure_exists }}
+      infrastructure_ready: ${{ steps.check_changes.outputs.infrastructure_ready }}
+      has_changes: ${{ steps.check_changes.outputs.has_changes }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -161,39 +170,49 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-3
 
-      - name: Check Infrastructure via AWS
-        id: check_aws
+      - name: Check Infrastructure Changes
+        id: check_changes
         run: |
-          echo "🔍 Vérification de l'infrastructure via AWS..."
+          echo "🔍 Vérification des changements d'infrastructure..."
           
-          WEB_COUNT=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=quiz-multijoueur-web-server" \
-                      "Name=instance-state-name,Values=running" \
-            --query 'length(Reservations[*].Instances[*])' \
-            --output text 2>/dev/null || echo "0")
+          # Initialize Terraform
+          cd infrastructure/terraform
+          terraform init
           
-          API_COUNT=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=quiz-multijoueur-api-server" \
-                      "Name=instance-state-name,Values=running" \
-            --query 'length(Reservations[*].Instances[*])' \
-            --output text 2>/dev/null || echo "0")
+          # Run terraform plan to detect changes
+          terraform plan -detailed-exitcode -out=tfplan
+          exit_code=$?
           
-          echo "📊 Instances trouvées: WEB=$WEB_COUNT, API=$API_COUNT"
-          
-          if [ "$WEB_COUNT" -gt 0 ] && [ "$API_COUNT" -gt 0 ]; then
-            echo "infrastructure_exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Infrastructure détectée - Déploiement Ansible activé"
+          if [ $exit_code -eq 0 ]; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "infrastructure_ready=true" >> $GITHUB_OUTPUT
+            echo "✅ Aucun changement d'infrastructure - Déploiement Ansible activé"
+          elif [ $exit_code -eq 2 ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "infrastructure_ready=false" >> $GITHUB_OUTPUT
+            echo "🔄 Changements d'infrastructure détectés!"
+            echo "📋 Vous devez appliquer les changements manuellement:"
+            echo "   - git pull"
+            echo "   - make init"
+            echo "   - make apply"
+            echo "❌ Déploiement Ansible suspendu"
           else
-            echo "infrastructure_exists=false" >> $GITHUB_OUTPUT
-            echo "❌ Infrastructure manquante - Déploiement manuel requis"
-            echo "🏗️ Exécutez: make init && make apply"
+            echo "❌ Erreur lors du plan Terraform"
+            exit $exit_code
           fi
+
+      - name: Upload Terraform Plan
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_id }}
+          path: infrastructure/terraform/tfplan
 
   deploy-application:
     name: 🚀 Déploiement Application avec Ansible
     runs-on: ubuntu-latest
     needs: [check-infrastructure]
-    if: needs.check-infrastructure.outputs.infrastructure_exists == 'true'
+    if: needs.check-infrastructure.outputs.infrastructure_ready == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
