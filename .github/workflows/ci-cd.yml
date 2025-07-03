@@ -303,8 +303,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/quiz-app-key.pem
           chmod 600 ~/.ssh/quiz-app-key.pem
-          ssh-keyscan -H "$WEB_SERVER_IP" >> ~/.ssh/known_hosts  # ← CORRIGER
-          ssh-keyscan -H "$API_SERVER_IP" >> ~/.ssh/known_hosts  # ← CORRIGER
+          ssh-keyscan -H "$WEB_SERVER_IP" >> ~/.ssh/known_hosts  
+          ssh-keyscan -H "$API_SERVER_IP" >> ~/.ssh/known_hosts  
       - name: Deploy Application with Ansible
         run: |
           cd infrastructure/ansible

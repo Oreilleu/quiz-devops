@@ -14,7 +14,7 @@ node_env: production
 db_path: ./data/quiz.db
 
 # Security
-allowed_origins: "http://{{ hostvars[groups['web_servers'][0]]['ansible_host'] }}"
+allowed_origins: "http://{{ groups['web_servers'][0] }}"
 
 # System user
 app_user: ubuntu

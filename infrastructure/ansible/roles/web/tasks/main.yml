@@ -12,11 +12,6 @@
     group: "{{ app_group }}"
     mode: '0755'
 
-- name: Install nginx
-  apt:
-    name: nginx
-    state: present
-
 - name: Deploy frontend files
   copy:
     src: "../../../../frontend/"
@@ -33,10 +28,6 @@
     dest: /etc/nginx/sites-available/default
     backup: yes
   notify: restart nginx
-
-- name: Test nginx configuration
-  command: nginx -t
-  changed_when: false
 
 - name: Start and enable nginx
   systemd:

@@ -4,24 +4,29 @@
     update_cache: yes
     cache_valid_time: 3600
 
-- name: Install system packages
+- name: Install system packages including nginx
   apt:
     name:
       - curl
       - wget
       - unzip
       - git
+      - nginx
     state: present
 
-- name: Install Node.js
-  shell: |
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    apt-get install -y nodejs
-  args:
-    creates: /usr/bin/node
+- name: Add NodeSource repository
+  apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+    state: present
 
-- name: Verify Node.js installation
-  command: node --version
-  register: node_version
-  failed_when: node_version.rc != 0
+- name: Add NodeSource repository
+  apt_repository:
+    repo: "deb https://deb.nodesource.com/node_18.x jammy main"
+    state: present
+    update_cache: yes
+
+- name: Install Node.js
+  apt:
+    name: nodejs
+    state: present
 

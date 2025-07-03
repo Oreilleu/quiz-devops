@@ -35,13 +35,6 @@
     - "../../../../backend/package.json"
     - "../../../../backend/server.js"
 
-- name: Set backend file permissions
-  file:
-    path: "{{ app_dir }}"
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    recurse: yes
-
 - name: Install npm dependencies
   npm:
     path: "{{ app_dir }}"

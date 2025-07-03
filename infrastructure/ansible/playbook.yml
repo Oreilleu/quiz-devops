@@ -41,7 +41,7 @@
       debug:
         msg: |
           Deployment successful!
-          Frontend: http://{{ hostvars[groups['web_servers'][0]]['ansible_host'] }}
-          API: http://{{ hostvars[groups['api_servers'][0]]['ansible_host'] }}:{{ app_port }}
+          Frontend: http://{{ groups['web_servers'][0] }}
+          API: http://{{ groups['api_servers'][0] }}:{{ app_port }}
       run_once: true
       when: inventory_hostname == groups['all'][0]
