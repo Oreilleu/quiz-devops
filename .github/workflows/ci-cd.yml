@@ -78,6 +78,15 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-ansible-validation-${{ env.ANSIBLE_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-pip-ansible-validation-
+            ${{ runner.os }}-pip-
+
       - name: Install Ansible
         run: |
           pip3 install ansible==${{ env.ANSIBLE_VERSION }}
@@ -137,23 +146,14 @@ jobs:
           path: quiz-app-*.tar.gz
           retention-days: 30
 
-  check-terraform-changes:
-    name: 🔍 Vérification Changements Terraform
+  check-infrastructure:
+    name: 🔍 Vérification Infrastructure via AWS
     runs-on: ubuntu-latest
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     outputs:
-      has_changes: ${{ steps.plan.outputs.has_changes || steps.initial_deploy.outputs.has_changes }}
-      infrastructure_deployed: ${{ steps.initial_deploy.outputs.infrastructure_deployed || 'false' }}
+      infrastructure_exists: ${{ steps.check_aws.outputs.infrastructure_exists }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -161,90 +161,39 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-3
 
-      - name: Terraform Init
-        run: make init
-
-      - name: Check if infrastructure exists
-        id: check_state
+      - name: Check Infrastructure via AWS
+        id: check_aws
         run: |
-          cd infrastructure/terraform
-          echo "🔍 Vérification de l'état de l'infrastructure..."
-          # Check if there are any resources in the state
-          RESOURCES=$(terraform state list 2>/dev/null | wc -l)
-          echo "📊 Nombre de ressources dans l'état: $RESOURCES"
-          if [ $RESOURCES -eq 0 ]; then
-            echo "infrastructure_exists=false" >> $GITHUB_OUTPUT
-            echo "🏗️ Aucune infrastructure détectée - Déploiement initial requis"
-          else
+          echo "🔍 Vérification de l'infrastructure via AWS..."
+          
+          WEB_COUNT=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=quiz-multijoueur-web-server" \
+                      "Name=instance-state-name,Values=running" \
+            --query 'length(Reservations[*].Instances[*])' \
+            --output text 2>/dev/null || echo "0")
+          
+          API_COUNT=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=quiz-multijoueur-api-server" \
+                      "Name=instance-state-name,Values=running" \
+            --query 'length(Reservations[*].Instances[*])' \
+            --output text 2>/dev/null || echo "0")
+          
+          echo "📊 Instances trouvées: WEB=$WEB_COUNT, API=$API_COUNT"
+          
+          if [ "$WEB_COUNT" -gt 0 ] && [ "$API_COUNT" -gt 0 ]; then
             echo "infrastructure_exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Infrastructure existante détectée ($RESOURCES ressources)"
-          fi
-
-      - name: Terraform Plan et Détection Changements
-        id: plan
-        if: steps.check_state.outputs.infrastructure_exists == 'true'
-        run: |
-          cd infrastructure/terraform
-          terraform plan -detailed-exitcode -out=tfplan
-          exit_code=$?
-          if [ $exit_code -eq 0 ]; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "✅ Aucun changement infrastructure détecté - Ansible va être exécuté"
-          elif [ $exit_code -eq 2 ]; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "🔄 Changements infrastructure détectés - Pipeline arrêtée pour approbation manuelle"
-            echo "📋 Pour appliquer les changements: exécutez 'make apply' manuellement"
+            echo "✅ Infrastructure détectée - Déploiement Ansible activé"
           else
-            echo "❌ Erreur lors du plan Terraform"
-            exit $exit_code
+            echo "infrastructure_exists=false" >> $GITHUB_OUTPUT
+            echo "❌ Infrastructure manquante - Déploiement manuel requis"
+            echo "🏗️ Exécutez: make init && make apply"
           fi
-
-      - name: Initial Infrastructure Deployment
-        id: initial_deploy
-        if: steps.check_state.outputs.infrastructure_exists == 'false'
-        run: |
-          cd infrastructure/terraform
-          echo "🏗️ Déploiement initial de l'infrastructure..."
-          terraform apply -auto-approve
-          echo "has_changes=false" >> $GITHUB_OUTPUT
-          echo "infrastructure_deployed=true" >> $GITHUB_OUTPUT
-          echo "✅ Infrastructure initiale déployée avec succès"
-
-      - name: Upload Terraform Plan
-        if: steps.plan.outputs.has_changes == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan-${{ github.run_id }}
-          path: infrastructure/terraform/tfplan
-
-  infrastructure-changes-detected:
-    name: 🛑 Changements Infrastructure Détectés - Action Manuelle Requise
-    runs-on: ubuntu-latest
-    needs: [check-terraform-changes]
-    if: needs.check-terraform-changes.outputs.has_changes == 'true'
-    steps:
-      - name: Infrastructure Changes Detected
-        run: |
-          echo "🛑 ATTENTION: Changements d'infrastructure détectés!"
-          echo ""
-          echo "📋 Actions requises:"
-          echo "1. Examinez le plan Terraform dans les artifacts"
-          echo "2. Si les changements sont corrects, exécutez manuellement:"
-          echo "   - git pull"
-          echo "   - make init"
-          echo "   - make apply"
-          echo ""
-          echo "❌ Le pipeline s'arrête ici pour éviter des changements automatiques non désirés"
-          echo ""
-          echo "ℹ️  Une fois l'infrastructure mise à jour manuellement, la prochaine exécution"
-          echo "   du pipeline déploiera automatiquement l'application avec Ansible"
-          exit 1
 
   deploy-application:
     name: 🚀 Déploiement Application avec Ansible
     runs-on: ubuntu-latest
-    needs: [check-terraform-changes]
-    if: always() && (needs.check-terraform-changes.outputs.has_changes == 'false' || needs.check-terraform-changes.result == 'success')
+    needs: [check-infrastructure]
+    if: needs.check-infrastructure.outputs.infrastructure_exists == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -252,21 +201,20 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+          
+      - name: Cache Python dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-ansible-${{ env.ANSIBLE_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-pip-ansible-
+            ${{ runner.os }}-pip-
+      
       - name: Install Ansible
         run: |
           pip3 install ansible==${{ env.ANSIBLE_VERSION }}
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      
+          
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -337,11 +285,12 @@ jobs:
           WEB_IP=$(head -n 2 infrastructure/ansible/inventory/hosts.ini | tail -n 1 | cut -d' ' -f1)
           
           echo "Test connexion au serveur web ($WEB_IP)..."
-          ssh -i ~/.ssh/quiz-app-key.pem -o ConnectTimeout=10 ubuntu@$WEB_IP "echo 'SSH OK'" || echo "Connexion web échouée"
+          ssh -i ~/.ssh/quiz-app-key.pem -o ConnectTimeout=5 -o ConnectionAttempts=2 ubuntu@$WEB_IP "echo 'SSH OK'" || echo "Connexion web échouée"
           
-          # Run Ansible with verbose output and proper SSH settings
+          # Run Ansible with optimized settings (no verbose to speed up)
           ANSIBLE_HOST_KEY_CHECKING=False \
-          ANSIBLE_SSH_ARGS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
-          ansible-playbook -i infrastructure/ansible/inventory/hosts.ini infrastructure/ansible/playbook.yml -v
+          ANSIBLE_SSH_ARGS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ControlMaster=auto -o ControlPersist=60s' \
+          ANSIBLE_PIPELINING=True \
+          ansible-playbook -i infrastructure/ansible/inventory/hosts.ini infrastructure/ansible/playbook.yml --forks=10
           
           echo "✅ Application déployée avec succès"
