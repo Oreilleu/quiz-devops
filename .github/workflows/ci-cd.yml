@@ -143,7 +143,8 @@ jobs:
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     outputs:
-      has_changes: ${{ steps.plan.outputs.has_changes }}
+      has_changes: ${{ steps.plan.outputs.has_changes || steps.initial_deploy.outputs.has_changes }}
+      infrastructure_deployed: ${{ steps.initial_deploy.outputs.infrastructure_deployed || 'false' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -167,14 +168,16 @@ jobs:
         id: check_state
         run: |
           cd infrastructure/terraform
+          echo "🔍 Vérification de l'état de l'infrastructure..."
           # Check if there are any resources in the state
           RESOURCES=$(terraform state list 2>/dev/null | wc -l)
+          echo "📊 Nombre de ressources dans l'état: $RESOURCES"
           if [ $RESOURCES -eq 0 ]; then
             echo "infrastructure_exists=false" >> $GITHUB_OUTPUT
             echo "🏗️ Aucune infrastructure détectée - Déploiement initial requis"
           else
             echo "infrastructure_exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Infrastructure existante détectée"
+            echo "✅ Infrastructure existante détectée ($RESOURCES ressources)"
           fi
 
       - name: Terraform Plan et Détection Changements
@@ -204,6 +207,7 @@ jobs:
           echo "🏗️ Déploiement initial de l'infrastructure..."
           terraform apply -auto-approve
           echo "has_changes=false" >> $GITHUB_OUTPUT
+          echo "infrastructure_deployed=true" >> $GITHUB_OUTPUT
           echo "✅ Infrastructure initiale déployée avec succès"
 
       - name: Upload Terraform Plan
