@@ -163,8 +163,23 @@ jobs:
       - name: Terraform Init
         run: make init
 
+      - name: Check if infrastructure exists
+        id: check_state
+        run: |
+          cd infrastructure/terraform
+          # Check if there are any resources in the state
+          RESOURCES=$(terraform state list 2>/dev/null | wc -l)
+          if [ $RESOURCES -eq 0 ]; then
+            echo "infrastructure_exists=false" >> $GITHUB_OUTPUT
+            echo "🏗️ Aucune infrastructure détectée - Déploiement initial requis"
+          else
+            echo "infrastructure_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Infrastructure existante détectée"
+          fi
+
       - name: Terraform Plan et Détection Changements
         id: plan
+        if: steps.check_state.outputs.infrastructure_exists == 'true'
         run: |
           cd infrastructure/terraform
           terraform plan -detailed-exitcode -out=tfplan
@@ -180,6 +195,16 @@ jobs:
             echo "❌ Erreur lors du plan Terraform"
             exit $exit_code
           fi
+
+      - name: Initial Infrastructure Deployment
+        id: initial_deploy
+        if: steps.check_state.outputs.infrastructure_exists == 'false'
+        run: |
+          cd infrastructure/terraform
+          echo "🏗️ Déploiement initial de l'infrastructure..."
+          terraform apply -auto-approve
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+          echo "✅ Infrastructure initiale déployée avec succès"
 
       - name: Upload Terraform Plan
         if: steps.plan.outputs.has_changes == 'true'
@@ -215,7 +240,7 @@ jobs:
     name: 🚀 Déploiement Application avec Ansible
     runs-on: ubuntu-latest
     needs: [check-terraform-changes]
-    if: needs.check-terraform-changes.outputs.has_changes == 'false'
+    if: always() && (needs.check-terraform-changes.outputs.has_changes == 'false' || needs.check-terraform-changes.result == 'success')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
