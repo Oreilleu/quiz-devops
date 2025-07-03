@@ -180,9 +180,9 @@ jobs:
           
           # Count expected resources from Terraform files
           cd infrastructure/terraform
-          EXPECTED_EC2=$(grep -c "resource \"aws_instance\"" *.tf || echo "0")
-          EXPECTED_S3=$(grep -c "resource \"aws_s3_bucket\"" *.tf || echo "0")
-          EXPECTED_VPC=$(grep -c "resource \"aws_vpc\"" *.tf || echo "0")
+          EXPECTED_EC2=$(grep -h "resource \"aws_instance\"" *.tf 2>/dev/null | wc -l || echo "0")
+          EXPECTED_S3=$(grep -h "resource \"aws_s3_bucket\"" *.tf 2>/dev/null | wc -l || echo "0")
+          EXPECTED_VPC=$(grep -h "resource \"aws_vpc\"" *.tf 2>/dev/null | wc -l || echo "0")
           
           echo "  - EC2 instances: $EXPECTED_EC2"
           echo "  - S3 buckets: $EXPECTED_S3" 
