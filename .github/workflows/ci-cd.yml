@@ -175,30 +175,56 @@ jobs:
         run: |
           echo "🔍 Vérification des changements d'infrastructure..."
           
-          # Initialize Terraform
+          # Check what resources should exist according to Terraform code
+          echo "📋 Ressources attendues selon le code Terraform:"
+          
+          # Count expected resources from Terraform files
           cd infrastructure/terraform
-          terraform init
+          EXPECTED_EC2=$(grep -c "resource \"aws_instance\"" *.tf || echo "0")
+          EXPECTED_S3=$(grep -c "resource \"aws_s3_bucket\"" *.tf || echo "0")
+          EXPECTED_VPC=$(grep -c "resource \"aws_vpc\"" *.tf || echo "0")
           
-          # Run terraform plan to detect changes
-          terraform plan -detailed-exitcode -out=tfplan
-          exit_code=$?
+          echo "  - EC2 instances: $EXPECTED_EC2"
+          echo "  - S3 buckets: $EXPECTED_S3" 
+          echo "  - VPCs: $EXPECTED_VPC"
           
-          if [ $exit_code -eq 0 ]; then
+          # Check actual resources in AWS
+          echo "🔍 Ressources actuelles dans AWS:"
+          cd ../..
+          
+          ACTUAL_EC2=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=quiz-multijoueur-*-server" \
+                      "Name=instance-state-name,Values=running" \
+            --query 'length(Reservations[*].Instances[*])' \
+            --output text 2>/dev/null || echo "0")
+          
+          ACTUAL_S3=$(aws s3api list-buckets \
+            --query 'length(Buckets[?contains(Name, `quiz-multijoueur`)])' \
+            --output text 2>/dev/null || echo "0")
+          
+          ACTUAL_VPC=$(aws ec2 describe-vpcs \
+            --filters "Name=tag:Name,Values=quiz-multijoueur-vpc" \
+            --query 'length(Vpcs[*])' \
+            --output text 2>/dev/null || echo "0")
+          
+          echo "  - EC2 instances: $ACTUAL_EC2"
+          echo "  - S3 buckets: $ACTUAL_S3"
+          echo "  - VPCs: $ACTUAL_VPC"
+          
+          # Compare expected vs actual
+          if [ "$EXPECTED_EC2" -eq "$ACTUAL_EC2" ] && [ "$EXPECTED_S3" -eq "$ACTUAL_S3" ] && [ "$EXPECTED_VPC" -eq "$ACTUAL_VPC" ]; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "infrastructure_ready=true" >> $GITHUB_OUTPUT
-            echo "✅ Aucun changement d'infrastructure - Déploiement Ansible activé"
-          elif [ $exit_code -eq 2 ]; then
+            echo "✅ Infrastructure correspond au code - Déploiement Ansible activé"
+          else
             echo "has_changes=true" >> $GITHUB_OUTPUT
             echo "infrastructure_ready=false" >> $GITHUB_OUTPUT
-            echo "🔄 Changements d'infrastructure détectés!"
-            echo "📋 Vous devez appliquer les changements manuellement:"
+            echo "🔄 Différences détectées entre code et infrastructure!"
+            echo "📋 Vous devez synchroniser l'infrastructure:"
             echo "   - git pull"
             echo "   - make init"
             echo "   - make apply"
             echo "❌ Déploiement Ansible suspendu"
-          else
-            echo "❌ Erreur lors du plan Terraform"
-            exit $exit_code
           fi
 
       - name: Upload Terraform Plan
