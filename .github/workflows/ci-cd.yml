@@ -40,7 +40,9 @@ jobs:
 
       # Corrige si erreur de formatage
       - name: Terraform format check
-        run: make plan
+        run: |
+          cd infrastructure/terraform
+          terraform fmt -check -recursive
 
       # Télécharge et instale TFlint
       - name: Install TFLint
