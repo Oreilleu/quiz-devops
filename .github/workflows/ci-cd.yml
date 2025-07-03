@@ -279,6 +279,16 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/quiz-app-key.pem
           chmod 600 ~/.ssh/quiz-app-key.pem
+          
+          # Configure SSH to avoid host key verification issues
+          cat >> ~/.ssh/config << EOF
+          Host *
+              StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+              IdentitiesOnly yes
+              LogLevel QUIET
+          EOF
+          chmod 600 ~/.ssh/config
       
       - name: Check infrastructure and Generate hosts.ini
         run: |
@@ -321,5 +331,17 @@ jobs:
       - name: Deploy Application with Ansible
         run: |
           echo "🚀 Déploiement de l'application avec Ansible..."
-          SSH_AUTH_SOCK="" ansible-playbook -i infrastructure/ansible/inventory/hosts.ini infrastructure/ansible/playbook.yml
+          
+          # Test SSH connectivity first
+          echo "🔗 Test de connectivité SSH..."
+          WEB_IP=$(head -n 2 infrastructure/ansible/inventory/hosts.ini | tail -n 1 | cut -d' ' -f1)
+          
+          echo "Test connexion au serveur web ($WEB_IP)..."
+          ssh -i ~/.ssh/quiz-app-key.pem -o ConnectTimeout=10 ubuntu@$WEB_IP "echo 'SSH OK'" || echo "Connexion web échouée"
+          
+          # Run Ansible with verbose output and proper SSH settings
+          ANSIBLE_HOST_KEY_CHECKING=False \
+          ANSIBLE_SSH_ARGS='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' \
+          ansible-playbook -i infrastructure/ansible/inventory/hosts.ini infrastructure/ansible/playbook.yml -v
+          
           echo "✅ Application déployée avec succès"
