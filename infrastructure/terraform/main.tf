@@ -259,22 +259,3 @@ resource "aws_nat_gateway" "main" {
 
   tags = { Name = "${var.project_name}-nat-gw" }
 }
-
-# Test resource pour vérifier la détection de changements d'infrastructure
-resource "aws_s3_bucket" "test_bucket" {
-  bucket = "${var.project_name}-test-bucket-${random_string.bucket_suffix.result}"
-
-  tags = {
-    Name        = "${var.project_name}-test-bucket"
-    Purpose     = "Infrastructure change detection test"
-    Environment = "test"
-  }
-}
-
-resource "random_string" "bucket_suffix" {
-  length  = 8
-  lower   = true
-  upper   = false
-  numeric = true
-  special = false
-}
