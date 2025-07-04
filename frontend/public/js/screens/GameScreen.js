@@ -15,7 +15,8 @@ class GameScreen {
     render(data = null) {
         this.currentQuestion = data || {};
         const isWaiting = data?.waiting || !data?.question;
-
+        console.log(CONFIG.SERVER_URL);
+        
         if (isWaiting) {
             return `
                 <div class="screen game-screen">
